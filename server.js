@@ -13,6 +13,14 @@ app.use(express.json());
 
 connectDB();
 
+function parseISTToUTC(timestamp) {
+  if (!timestamp) return new Date();
+
+  const localDate = new Date(timestamp);
+
+  // Convert IST → UTC manually
+  return new Date(localDate.getTime() - (5.5 * 60 * 60 * 1000));
+}
 
 // 🔥 DEVICE LOG API
 app.post("/device/log", async (req, res) => {
@@ -37,7 +45,7 @@ app.post("/device/log", async (req, res) => {
       lng = parseFloat(parts[1]);
     }
 
-    const timestamp = body.timestamp ? new Date(body.timestamp) : new Date();
+    const utcDate = parseISTToUTC(body.timestamp);
 
     // 🔥 SAVE LOG
     await Log.create({
@@ -49,8 +57,7 @@ app.post("/device/log", async (req, res) => {
       network: body.network,
       status: body.status,
       event,
-      app: body.app,
-      timestamp
+      utcDate
     });
 
     // 🔗 FIND RICKSHAW LINK
@@ -67,15 +74,15 @@ app.post("/device/log", async (req, res) => {
       charging: body.charging,
       network: body.network,
       lastSeen: new Date(),
-      lastLogTime: timestamp
+      lastLogTime: utcDate
     };
 
     if (event === "reboot") {
-      updateData.lastRebootTime = timestamp;
+      updateData.lastRebootTime = utcDate;
     }
 
     if (event === "app_open") {
-      updateData.lastAppOpenTime = timestamp;
+      updateData.lastAppOpenTime = utcDate;
     }
 
     await Device.findOneAndUpdate(
@@ -138,13 +145,13 @@ app.get("/devices", async (req, res) => {
 
 // 🔥 GET LOGS
 app.get("/logs", async (req, res) => {
-  const logs = await Log.find().sort({ timestamp: -1 }).limit(100);
+  const logs = await Log.find().sort({ utcDate: -1 }).limit(100);
 
   const result = logs.map(log => ({
     ...log._doc,
-    timestampIST: toIST(log.timestamp)
+    timestampIST: toIST(log.utcDate)
   }));
-  
+
   res.json(result);
 });
 
