@@ -12,8 +12,7 @@ const logSchema = new mongoose.Schema({
 
   status: String,
 
-  event: String, // heartbeat / reboot
-  app: String,
+  event: String,
 
   timestamp: Date
 });

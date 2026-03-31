@@ -55,9 +55,13 @@ app.post("/device/log", async (req, res) => {
       device_id,
       lat,
       lng,
-      battery: parseInt(body.battery),
-      charging: body.charging,
-      network: body.network,
+      battery: body.battery ? parseInt(body.battery) : null,
+
+      charging: body.charging
+        ? body.charging.toString().trim().toLowerCase()
+        : "unknown",
+
+      network: body.network || "unknown",
       status: body.status,
       event,
       timestamp: utcDate
