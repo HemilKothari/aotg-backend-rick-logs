@@ -25,6 +25,7 @@ function parseISTToUTC(timestamp) {
 // 🔥 DEVICE LOG API
 app.post("/device/log", async (req, res) => {
   try {
+    console.log("FULL BODY:", req.body);
     const body = req.body || {};
 
     const device_id = body.device_id;
@@ -47,6 +48,8 @@ app.post("/device/log", async (req, res) => {
 
     const utcDate = parseISTToUTC(body.timestamp);
 
+    console.log("Charging:", body.charging);
+
     // 🔥 SAVE LOG
     await Log.create({
       device_id,
@@ -57,7 +60,7 @@ app.post("/device/log", async (req, res) => {
       network: body.network,
       status: body.status,
       event,
-      utcDate
+      timestamp: utcDate
     });
 
     // 🔗 FIND RICKSHAW LINK
@@ -70,9 +73,13 @@ app.post("/device/log", async (req, res) => {
       vehicle_number,
       lat,
       lng,
-      battery: parseInt(body.battery),
-      charging: body.charging,
-      network: body.network,
+      battery: body.battery ? parseInt(body.battery) : null,
+
+      charging: body.charging
+        ? body.charging.toString().trim().toLowerCase()
+        : "unknown",
+
+      network: body.network || "unknown",
       lastSeen: new Date(),
       lastLogTime: utcDate
     };
@@ -145,11 +152,11 @@ app.get("/devices", async (req, res) => {
 
 // 🔥 GET LOGS
 app.get("/logs", async (req, res) => {
-  const logs = await Log.find().sort({ utcDate: -1 }).limit(100);
+  const logs = await Log.find().sort({ timestamp: -1 }).limit(100);
 
   const result = logs.map(log => ({
     ...log._doc,
-    timestampIST: toIST(log.utcDate)
+    timestampIST: toIST(log.timestamp)
   }));
 
   res.json(result);
