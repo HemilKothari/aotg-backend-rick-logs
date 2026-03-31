@@ -13,20 +13,21 @@ app.use(express.json());
 
 connectDB();
 
-// POST DEVICE LOG
+
+// 🔥 DEVICE LOG API
 app.post("/device/log", async (req, res) => {
   try {
     const body = req.body || {};
 
     const device_id = body.device_id;
     const location = body.location;
-    const timestamp = body.timestamp;
+    const event = body.event || "heartbeat";
 
     if (!device_id) {
       return res.status(400).json({ error: "device_id required" });
     }
 
-    // Parse location
+    // 📍 Parse location
     let lat = null;
     let lng = null;
 
@@ -36,36 +37,54 @@ app.post("/device/log", async (req, res) => {
       lng = parseFloat(parts[1]);
     }
 
-    const status = body.status?.trim() || "active";
-    const utcDate = timestamp ? new Date(timestamp) : new Date();
-    const rickshaw = await Rickshaw.findOne({ device_id });
-    const vehicle_number = rickshaw ? rickshaw.vehicle_number : null;
+    const timestamp = body.timestamp ? new Date(body.timestamp) : new Date();
 
-    // SAVE LOG
+    // 🔥 SAVE LOG
     await Log.create({
       device_id,
       lat,
       lng,
-      status,
-      timestamp: utcDate
+      battery: parseInt(body.battery),
+      charging: body.charging,
+      network: body.network,
+      status: body.status,
+      event,
+      app: body.app,
+      timestamp
     });
 
-    // UPDATE DEVICE
+    // 🔗 FIND RICKSHAW LINK
+    const rickshaw = await Rickshaw.findOne({ device_id });
+    const vehicle_number = rickshaw ? rickshaw.vehicle_number : null;
+
+    // 🔥 DEVICE UPDATE
+    let updateData = {
+      device_id,
+      vehicle_number,
+      lat,
+      lng,
+      battery: parseInt(body.battery),
+      charging: body.charging,
+      network: body.network,
+      lastSeen: new Date(),
+      lastLogTime: timestamp
+    };
+
+    if (event === "reboot") {
+      updateData.lastRebootTime = timestamp;
+    }
+
+    if (event === "app_open") {
+      updateData.lastAppOpenTime = timestamp;
+    }
+
     await Device.findOneAndUpdate(
       { device_id },
-      {
-        device_id,
-        vehicle_number,
-        lat,
-        lng,
-        status,
-        lastSeen: new Date(),
-        lastLogTime: utcDate
-      },
+      updateData,
       { upsert: true }
     );
 
-    console.log("Log saved:", device_id);
+    console.log("📡 Log:", device_id, event);
 
     res.json({ success: true });
 
@@ -75,6 +94,38 @@ app.post("/device/log", async (req, res) => {
   }
 });
 
+
+// 🔥 GET DEVICES
+app.get("/devices", async (req, res) => {
+  const devices = await Device.find();
+
+  const now = new Date();
+
+  const result = devices.map(d => {
+    const diff = (now - d.lastSeen) / 1000;
+
+    return {
+      device_id: d.device_id,
+      vehicle_number: d.vehicle_number,
+      lat: d.lat,
+      lng: d.lng,
+      status: diff > 600 ? "offline" : "active",
+      lastSeen: d.lastSeen
+    };
+  });
+
+  res.json(result);
+});
+
+
+// 🔥 GET LOGS
+app.get("/logs", async (req, res) => {
+  const logs = await Log.find().sort({ timestamp: -1 }).limit(100);
+  res.json(logs);
+});
+
+
+// 🔥 CREATE RICKSHAW
 app.post("/rickshaw", async (req, res) => {
   try {
     const data = req.body;
@@ -89,36 +140,9 @@ app.post("/rickshaw", async (req, res) => {
   }
 });
 
-// GET DEVICES
-app.get("/devices", async (req, res) => {
-  const devices = await Device.find();
-
-  const now = new Date();
-
-  const result = devices.map(d => {
-    const diff = (now - d.lastSeen) / 1000;
-
-    return {
-      device_id: d.device_id,
-      lat: d.lat,
-      lng: d.lng,
-      status: diff > 600 ? "offline" : "active",
-      lastSeen: d.lastSeen,
-      lastLogTime: d.lastLogTime
-    };
-  });
-
-  res.json(result);
-});
-
-// GET LOGS
-app.get("/logs", async (req, res) => {
-  const logs = await Log.find().sort({ timestamp: -1 }).limit(100);
-  res.json(logs);
-});
 
 const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+  console.log(`🚀 Server running on port ${PORT}`);
 });
