@@ -7,7 +7,6 @@ const logSchema = new mongoose.Schema({
   lng: Number,
 
   battery: Number,
-  charging: String,
   network: String,
 
   status: String,

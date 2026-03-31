@@ -48,19 +48,12 @@ app.post("/device/log", async (req, res) => {
 
     const utcDate = parseISTToUTC(body.timestamp);
 
-    console.log("Charging:", body.charging);
-
     // 🔥 SAVE LOG
     await Log.create({
       device_id,
       lat,
       lng,
       battery: body.battery ? parseInt(body.battery) : null,
-
-      charging: body.charging
-        ? body.charging.toLowerCase()
-        : "unknown",
-
       network: body.network || "unknown",
       status: body.status,
       event,
@@ -78,11 +71,6 @@ app.post("/device/log", async (req, res) => {
       lat,
       lng,
       battery: body.battery ? parseInt(body.battery) : null,
-
-      charging: body.charging
-        ? body.charging.toString().trim().toLowerCase()
-        : "unknown",
-
       network: body.network || "unknown",
       lastSeen: new Date(),
       lastLogTime: utcDate

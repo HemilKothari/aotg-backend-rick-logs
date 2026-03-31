@@ -9,7 +9,6 @@ const deviceSchema = new mongoose.Schema({
   lng: Number,
 
   battery: Number,
-  charging: String,
   network: String,
 
   lastSeen: Date,
