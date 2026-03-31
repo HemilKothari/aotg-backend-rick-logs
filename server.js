@@ -94,6 +94,19 @@ app.post("/device/log", async (req, res) => {
   }
 });
 
+function toIST(date) {
+  if (!date) return null;
+  return new Date(date).toLocaleString("en-IN", {
+    timeZone: "Asia/Kolkata",
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit"
+  });
+}
+
 
 // 🔥 GET DEVICES
 app.get("/devices", async (req, res) => {
@@ -110,7 +123,12 @@ app.get("/devices", async (req, res) => {
       lat: d.lat,
       lng: d.lng,
       status: diff > 600 ? "offline" : "active",
-      lastSeen: d.lastSeen
+
+      lastSeen: d.lastSeen,
+      lastSeenIST: toIST(d.lastSeen),
+
+      lastLogTime: d.lastLogTime,
+      lastLogTimeIST: toIST(d.lastLogTime),
     };
   });
 
@@ -121,7 +139,13 @@ app.get("/devices", async (req, res) => {
 // 🔥 GET LOGS
 app.get("/logs", async (req, res) => {
   const logs = await Log.find().sort({ timestamp: -1 }).limit(100);
-  res.json(logs);
+
+  const result = logs.map(log => ({
+    ...log._doc,
+    timestampIST: toIST(log.timestamp)
+  }));
+  
+  res.json(result);
 });
 
 
