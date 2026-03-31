@@ -58,7 +58,7 @@ app.post("/device/log", async (req, res) => {
       battery: body.battery ? parseInt(body.battery) : null,
 
       charging: body.charging
-        ? body.charging.toString().trim().toLowerCase()
+        ? body.charging.toLowerCase()
         : "unknown",
 
       network: body.network || "unknown",
